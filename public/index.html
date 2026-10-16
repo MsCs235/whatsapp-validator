@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WhatsApp Checker</title>
+  <style>
+    :root {
+      --bg: #f0f2f5; --card: #fff; --text: #111b21; --muted: #667781;
+      --green: #25d366; --green-dark: #128c7e; --red: #e5484d; --border: #d1d7db; --code-bg: #f5f6f7;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0b141a; --card: #1f2c33; --text: #e9edef; --muted: #8696a0; --border: #374248; --code-bg: #111b21; }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 16px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    .wrap { max-width: 480px; margin: 0 auto; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0 16px; flex-wrap: wrap; }
+    .topbar .brand { font-weight: 700; font-size: 1.1rem; }
+    .topbar .who { color: var(--muted); font-size: .9rem; display: flex; gap: 10px; align-items: center; min-width: 0; }
+    .topbar .who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card {
+      background: var(--card); border-radius: 16px; padding: 24px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08); margin-bottom: 16px;
+    }
+    .center { text-align: center; }
+    h1 { margin: 0 0 4px; font-size: 1.5rem; }
+    h2 { font-size: 1.1rem; margin: 0 0 4px; }
+    .sub { margin: 0 0 20px; color: var(--muted); font-size: .95rem; }
+    a { color: var(--green-dark); }
+    @media (prefers-color-scheme: dark) { a { color: var(--green); } }
+    form.row { display: flex; gap: 8px; }
+    form.stack { display: flex; flex-direction: column; gap: 10px; }
+    input[type=email], input[type=password], input[type=tel] {
+      flex: 1; min-width: 0; padding: 12px 14px; font-size: 1rem; border-radius: 10px;
+      border: 1px solid var(--border); background: transparent; color: var(--text);
+    }
+    input:focus { outline: 2px solid var(--green); border-color: transparent; }
+    button {
+      padding: 12px 18px; font-size: 1rem; font-weight: 600; border: 0; border-radius: 10px;
+      background: var(--green-dark); color: #fff; cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    button.secondary, button.link { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    button.small { padding: 6px 12px; font-size: .85rem; }
+    .tabs { display: flex; margin-bottom: 18px; border-bottom: 1px solid var(--border); }
+    .tabs button { flex: 1; background: none; color: var(--muted); border-radius: 0; border-bottom: 2px solid transparent; }
+    .tabs button.on { color: var(--text); border-bottom-color: var(--green); }
+    .result { margin-top: 16px; padding: 14px; border-radius: 12px; font-weight: 600; display: none; text-align: center; }
+    .result.yes { display: block; background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green-dark); }
+    .result.no  { display: block; background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--red); }
+    .result.err { display: block; background: color-mix(in srgb, var(--muted) 15%, transparent); color: var(--muted); }
+    @media (prefers-color-scheme: dark) { .result.yes { color: var(--green); } }
+    .field-label { font-weight: 600; font-size: .95rem; margin-bottom: 8px; }
+    .muted { color: var(--muted); font-weight: 400; }
+    .num-box { border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+    .num-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .num-row .idx { width: 20px; text-align: right; color: var(--muted); font-size: .9rem; flex: none; }
+    .num-row .del {
+      flex: none; width: 40px; height: 40px; padding: 0; background: transparent; color: var(--red);
+      border: 1px solid var(--border); font-size: 1rem;
+    }
+    #bulk-text {
+      width: 100%; padding: 12px; font: .95rem/1.5 ui-monospace, Consolas, monospace; border-radius: 10px;
+      border: 1px solid var(--border); background: transparent; color: var(--text); resize: vertical; margin-bottom: 10px;
+    }
+    .num-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .num-actions .push { margin-left: auto; }
+    .check-item { margin-top: 14px; }
+    .check-item .result { margin-top: 0; }
+    .profile { margin-top: 14px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; display: none; }
+    .profile.on { display: block; }
+    .profile-head { display: flex; align-items: center; gap: 14px; }
+    .avatar {
+      width: 72px; height: 72px; border-radius: 50%; flex: none; object-fit: cover;
+      background: var(--code-bg); display: grid; place-items: center; color: var(--muted); font-size: 1.8rem;
+    }
+    .profile-name { font-weight: 700; font-size: 1.05rem; word-break: break-word; }
+    .profile-num { color: var(--muted); font-size: .9rem; }
+    .profile-handle { color: var(--green-dark); font-size: .9rem; font-weight: 600; word-break: break-all; }
+    @media (prefers-color-scheme: dark) { .profile-handle { color: var(--green); } }
+    .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .tag { font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 99px;
+           background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green-dark); }
+    @media (prefers-color-scheme: dark) { .tag { color: var(--green); } }
+    .tag.grey { background: var(--code-bg); color: var(--muted); }
+    .fields { margin: 14px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: .9rem; }
+    .fields dt { color: var(--muted); }
+    .fields dd { margin: 0; word-break: break-word; white-space: pre-line; }
+    .profile .hint { margin-top: 12px; }
+    #qr img { width: 240px; max-width: 100%; background: #fff; padding: 8px; border-radius: 8px; }
+    .hint { color: var(--muted); font-size: .85rem; margin: 10px 0 0; }
+    .key-box {
+      display: flex; align-items: center; gap: 8px; background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 12px; margin: 12px 0 10px;
+    }
+    .key-box code { flex: 1; min-width: 0; font: .85rem ui-monospace, Consolas, monospace; word-break: break-all; }
+    .key-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+          overflow-x: auto; font: .8rem/1.5 ui-monospace, Consolas, monospace; margin: 10px 0 0; }
+    .status { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+    .dot.ok { background: var(--green); } .dot.bad { background: var(--red); }
+    .drop {
+      display: block; border: 2px dashed var(--border); border-radius: 12px; padding: 20px 12px; text-align: center;
+      cursor: pointer; color: var(--muted); font-size: .95rem; margin: 12px 0;
+    }
+    .drop:hover, .drop.over { border-color: var(--green); }
+    .drop input { display: none; }
+    .drop strong { color: var(--text); word-break: break-all; }
+    .bar { height: 10px; background: var(--border); border-radius: 99px; overflow: hidden; margin: 12px 0 8px; }
+    .bar div { height: 100%; width: 0; background: var(--green); transition: width .4s; }
+    .stats { font-size: .9rem; color: var(--muted); text-align: center; }
+    .btn-row { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+    a.button {
+      display: inline-block; padding: 12px 18px; font-weight: 600; border-radius: 10px;
+      background: var(--green-dark); color: #fff; text-decoration: none;
+    }
+    .badge { font-size: .7rem; font-weight: 700; background: var(--green-dark); color: #fff; padding: 2px 6px; border-radius: 4px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Logged out -->
+  <section id="auth-view" hidden>
+    <div class="card center" style="margin-top:6vh">
+      <h1>WhatsApp Checker</h1>
+      <p class="sub">Find out if phone numbers use WhatsApp</p>
+      <div class="tabs">
+        <button type="button" id="tab-login" class="on">Log in</button>
+        <button type="button" id="tab-register">Create account</button>
+      </div>
+      <form id="auth-form" class="stack">
+        <input id="email" type="email" placeholder="Email" autocomplete="email" required />
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password" required minlength="8" />
+        <button id="auth-btn" type="submit">Log in</button>
+      </form>
+      <p class="hint" id="pw-hint" hidden>At least 8 characters.</p>
+      <div id="auth-error" class="result"></div>
+    </div>
+  </section>
+
+  <!-- Logged in -->
+  <section id="app-view" hidden>
+    <div class="topbar">
+      <div class="brand">WhatsApp Checker</div>
+      <div class="who">
+        <span id="user-email"></span>
+        <button type="button" id="logout-btn" class="secondary small">Log out</button>
+      </div>
+    </div>
+
+    <div class="card center" id="wa-card">
+      <h2>Your WhatsApp</h2>
+      <p class="sub" id="connect-msg" style="margin-bottom:12px">Loading…</p>
+      <div id="qr"></div>
+      <p class="hint" id="qr-hint" hidden>Open WhatsApp on your phone → Settings → Linked devices → Link a device, then scan this code.</p>
+      <div class="btn-row">
+        <button type="button" id="link-btn" hidden>Link WhatsApp</button>
+        <button type="button" id="unlink-btn" class="secondary small" hidden>Unlink</button>
+      </div>
+      <p class="hint" id="sent-today" hidden></p>
+    </div>
+
+    <div class="card">
+      <h2>Your API key</h2>
+      <p class="hint" style="margin-top:0">Use this key to call the API from your own projects. Checks and messages sent with it use <b>your</b> linked WhatsApp. Keep it secret.</p>
+      <div class="key-box">
+        <code id="api-key">••••••••••••••••••••••••••••••••</code>
+      </div>
+      <div class="key-actions">
+        <button type="button" id="show-key" class="secondary small">Show</button>
+        <button type="button" id="copy-key" class="secondary small">Copy</button>
+        <button type="button" id="regen-key" class="secondary small">Generate new key</button>
+      </div>
+      <pre id="example"></pre>
+      <p class="hint"><a href="/docs.html">Full API documentation →</a></p>
+    </div>
+
+    <div class="card">
+      <h2>Check numbers</h2>
+      <div class="status" style="margin:6px 0 14px"><span class="dot" id="wa-dot"></span><span id="wa-status">Checking connection…</span></div>
+      <form id="form">
+        <div class="field-label">Phone numbers <span class="muted">(include the country code)</span></div>
+        <div class="num-box">
+          <div id="num-rows"></div>
+          <textarea id="bulk-text" rows="6" hidden placeholder="One number per line&#10;+201026324520&#10;+201025224523"></textarea>
+          <div class="num-actions">
+            <button type="button" id="add-row" class="small">+ Add</button>
+            <button type="button" id="bulk-toggle" class="secondary small">Bulk edit</button>
+            <button type="button" id="clear-empty" class="secondary small push">Remove empty fields</button>
+          </div>
+        </div>
+        <button id="btn" type="submit" style="width:100%;margin-top:12px">Check</button>
+      </form>
+      <p class="hint" id="check-progress" hidden></p>
+      <div id="results"></div>
+    </div>
+
+    <div class="card">
+      <h2>Check an Excel file</h2>
+      <p class="hint" style="margin-top:0">Upload an .xlsx file with a column named <b>numbers</b> (header in the first row).</p>
+      <form id="bulk-form">
+        <label class="drop" id="drop">
+          <input id="file" type="file" accept=".xlsx" />
+          <span id="file-label">Click to choose a file, or drop it here</span>
+        </label>
+        <button id="bulk-btn" type="submit" disabled style="width:100%">Upload &amp; check</button>
+      </form>
+      <div id="progress" hidden>
+        <div class="bar"><div id="bar-fill"></div></div>
+        <div class="stats" id="stats"></div>
+        <div class="btn-row">
+          <button id="cancel-btn" type="button" class="secondary">Stop</button>
+          <a id="download" class="button" hidden>Download results</a>
+        </div>
+      </div>
+      <div id="bulk-error" class="result"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let me = null;
+  let statusTimer = null;
+
+  async function api(url, options = {}) {
+    const res = await fetch(url, options);
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && !url.startsWith('/auth/login') && !url.startsWith('/auth/register')) {
+      showAuth();
+      throw new Error('Please log in.');
+    }
+    if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+    return data;
+  }
+  const postJson = (url, body) => api(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}),
+  });
+
+  // --- Auth -----------------------------------------------------------------
+  let mode = 'login';
+  function setMode(m) {
+    mode = m;
+    $('tab-login').classList.toggle('on', m === 'login');
+    $('tab-register').classList.toggle('on', m === 'register');
+    $('auth-btn').textContent = m === 'login' ? 'Log in' : 'Create account';
+    $('password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+    $('pw-hint').hidden = m === 'login';
+    $('auth-error').className = 'result';
+  }
+  $('tab-login').onclick = () => setMode('login');
+  $('tab-register').onclick = () => setMode('register');
+
+  $('auth-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('auth-btn').disabled = true;
+    $('auth-error').className = 'result';
+    try {
+      const user = await postJson(`/auth/${mode}`, { email: $('email').value, password: $('password').value });
+      $('password').value = '';
+      showApp(user);
+    } catch (err) {
+      $('auth-error').className = 'result err';
+      $('auth-error').textContent = err.message;
+    } finally {
+      $('auth-btn').disabled = false;
+    }
+  });
+
+  $('logout-btn').onclick = async () => {
+    await fetch('/auth/logout', { method: 'POST' });
+    showAuth();
+  };
+
+  function showAuth() {
+    me = null;
+    clearTimeout(statusTimer);
+    $('app-view').hidden = true;
+    $('auth-view').hidden = false;
+  }
+
+  function showApp(user) {
+    me = user;
+    $('auth-view').hidden = true;
+    $('app-view').hidden = false;
+    $('user-email').textContent = user.email;
+    renderKey(false);
+    clearTimeout(statusTimer);
+    pollStatus();
+  }
+
+  // --- API key ----------------------------------------------------------------
+  let keyVisible = false;
+  function renderKey(visible) {
+    keyVisible = visible;
+    $('api-key').textContent = visible ? me.api_key : me.api_key.slice(0, 8) + '•'.repeat(24);
+    $('show-key').textContent = visible ? 'Hide' : 'Show';
+    const key = visible ? me.api_key : 'YOUR_API_KEY';
+    $('example').textContent =
+`curl -X POST "${location.origin}/api/v1/check" \\
+  -H "X-API-Key: ${key}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"number": ["+201001234567", "+201000000000"]}'`;
+  }
+  $('show-key').onclick = () => renderKey(!keyVisible);
+  $('copy-key').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(me.api_key);
+      $('copy-key').textContent = 'Copied!';
+    } catch {
+      renderKey(true);
+      $('copy-key').textContent = 'Select & copy';
+    }
+    setTimeout(() => ($('copy-key').textContent = 'Copy'), 1500);
+  };
+  $('regen-key').onclick = async () => {
+    if (!confirm('Generate a new API key? Your current key will stop working immediately.')) return;
+    try {
+      me = await postJson('/auth/api-key');
+      renderKey(true);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  // --- Your WhatsApp link -------------------------------------------------------
+  let lastState = null;
+  function renderWhatsApp(wa) {
+    const ready = wa.state === 'ready';
+    if (lastState === 'qr' && wa.state === 'not_linked') {
+      $('connect-msg').textContent = 'The QR code expired. Click "Link WhatsApp" to get a new one.';
+    } else {
+      $('connect-msg').textContent =
+        ready ? `✓ Linked as ${wa.name ? wa.name + ' · ' : ''}${wa.number || ''}` :
+        wa.state === 'qr' ? 'Scan this QR code with the WhatsApp account you want to use.' :
+        wa.state === 'starting' ? 'Starting WhatsApp… this can take up to a minute.' :
+        wa.state === 'disconnected' ? 'WhatsApp disconnected, reconnecting…' :
+        'Link your WhatsApp account to check numbers and send messages. Everything you do here uses your own account.';
+    }
+    lastState = wa.state;
+    $('qr').innerHTML = wa.qr ? `<img src="${wa.qr}" alt="WhatsApp QR code">` : '';
+    $('qr-hint').hidden = !wa.qr;
+    $('link-btn').hidden = wa.state !== 'not_linked';
+    $('unlink-btn').hidden = wa.state === 'not_linked';
+    $('unlink-btn').textContent = ready ? 'Unlink' : 'Cancel';
+    $('sent-today').hidden = !ready;
+    $('sent-today').textContent = `Messages sent today via API: ${wa.sent_today} / ${wa.daily_limit}`;
+
+    $('wa-dot').className = 'dot ' + (ready ? 'ok' : 'bad');
+    $('wa-status').textContent = ready ? 'Using your WhatsApp' : 'Link your WhatsApp above to start checking';
+    waReady = ready;
+    setCheckButton();
+  }
+
+  async function pollStatus() {
+    if (!me) return;
+    try {
+      renderWhatsApp(await api('/api/whatsapp'));
+    } catch { /* api() handles 401; ignore network blips */ }
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(pollStatus, 3000);
+  }
+
+  $('link-btn').onclick = async () => {
+    $('link-btn').disabled = true;
+    try {
+      renderWhatsApp(await postJson('/api/whatsapp/link'));
+    } catch (err) {
+      $('connect-msg').textContent = err.message;
+    } finally {
+      $('link-btn').disabled = false;
+    }
+  };
+
+  $('unlink-btn').onclick = async () => {
+    if (lastState === 'ready' &&
+        !confirm('Unlink your WhatsApp? Your API key will stop working for checks and messages until you link again.')) return;
+    $('unlink-btn').disabled = true;
+    try {
+      renderWhatsApp(await postJson('/api/whatsapp/unlink'));
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      $('unlink-btn').disabled = false;
+    }
+  };
+
+  // --- Check numbers -------------------------------------------------------------
+  const MAX_NUMBERS = 20;
+  let checking = false;
+  let waReady = false;
+  const setCheckButton = () => { $('btn').disabled = !waReady || checking; };
+
+  function addRow(value = '', focus = false) {
+    if ($('num-rows').children.length >= MAX_NUMBERS) return;
+    const row = el('div', 'num-row');
+    const input = el('input');
+    input.type = 'tel';
+    input.placeholder = '+20 100 123 4567';
+    input.autocomplete = 'off';
+    input.value = value;
+    // Enter in a row adds the next row instead of submitting
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); addRow('', true); }
+    });
+    const del = el('button', 'del', '✕');
+    del.type = 'button';
+    del.title = 'Remove';
+    del.onclick = () => {
+      row.remove();
+      if (!$('num-rows').children.length) addRow();
+      renumber();
+    };
+    row.append(el('span', 'idx'), input, del);
+    $('num-rows').append(row);
+    renumber();
+    if (focus) input.focus();
+  }
+
+  function renumber() {
+    const rows = [...$('num-rows').children];
+    rows.forEach((r, i) => { r.querySelector('.idx').textContent = i + 1; });
+    $('add-row').disabled = rows.length >= MAX_NUMBERS;
+  }
+
+  const rowValues = () => [...$('num-rows').querySelectorAll('input')].map((i) => i.value.trim());
+  const bulkMode = () => !$('bulk-text').hidden;
+
+  function setRows(values) {
+    $('num-rows').replaceChildren();
+    values.slice(0, MAX_NUMBERS).forEach((v) => addRow(v));
+    if (!$('num-rows').children.length) addRow();
+  }
+
+  $('add-row').onclick = () => {
+    if (bulkMode()) $('bulk-toggle').click();
+    addRow('', true);
+  };
+
+  $('bulk-toggle').onclick = () => {
+    if (bulkMode()) {
+      setRows($('bulk-text').value.split(/[\n,;]+/).map((v) => v.trim()).filter(Boolean));
+      $('bulk-text').hidden = true;
+      $('num-rows').hidden = false;
+      $('bulk-toggle').textContent = 'Bulk edit';
+    } else {
+      $('bulk-text').value = rowValues().filter(Boolean).join('\n');
+      $('bulk-text').hidden = false;
+      $('num-rows').hidden = true;
+      $('bulk-toggle').textContent = 'Done';
+      $('bulk-text').focus();
+    }
+  };
+
+  $('clear-empty').onclick = () => {
+    if (bulkMode()) {
+      $('bulk-text').value = $('bulk-text').value.split('\n').map((v) => v.trim()).filter(Boolean).join('\n');
+    } else {
+      setRows(rowValues().filter(Boolean));
+    }
+  };
+
+  function showCheckResult(item, number, data, error) {
+    item.replaceChildren();
+    const banner = el('div');
+    if (error) {
+      banner.className = 'result err';
+      banner.textContent = `${number}: ${error}`;
+    } else if (data.registered) {
+      banner.className = 'result yes';
+      banner.textContent = `✓ ${data.number} has WhatsApp`;
+    } else {
+      banner.className = 'result no';
+      banner.textContent = `✗ ${data.number} does not have WhatsApp`;
+    }
+    item.append(banner);
+    if (data && data.registered) {
+      const box = el('div', 'profile');
+      renderProfile(box, data.number, data.profile || {});
+      item.append(box);
+    }
+  }
+
+  $('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (bulkMode()) $('bulk-toggle').click(); // apply the pasted list first
+    const numbers = [...new Set(rowValues().filter(Boolean))]; // skip empty rows and repeats
+    if (!numbers.length) return;
+
+    checking = true;
+    setCheckButton();
+    $('btn').textContent = 'Checking…';
+    $('results').replaceChildren();
+    const items = numbers.map((n) => {
+      const item = el('div', 'check-item');
+      item.append(el('div', 'result err', `${n}: waiting…`));
+      $('results').append(item);
+      return item;
+    });
+
+    // One at a time: the server spaces requests to protect your WhatsApp account anyway
+    for (let i = 0; i < numbers.length && me; i++) {
+      $('check-progress').hidden = false;
+      $('check-progress').textContent = `Checking ${i + 1} of ${numbers.length}…`;
+      items[i].firstChild.textContent = `${numbers[i]}: checking…`;
+      try {
+        showCheckResult(items[i], numbers[i], await postJson('/api/check', { number: numbers[i] }));
+      } catch (err) {
+        showCheckResult(items[i], numbers[i], null, err.message);
+      }
+    }
+    $('check-progress').textContent = `Done: checked ${numbers.length} number${numbers.length > 1 ? 's' : ''}.`;
+    checking = false;
+    setCheckButton();
+    $('btn').textContent = 'Check';
+  });
+
+  // Build with createElement/textContent: names and "About" text come from strangers and may contain HTML
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function renderProfile(box, number, p) {
+    box.replaceChildren();
+
+    const head = el('div', 'profile-head');
+    let avatar;
+    if (p.picture) {
+      avatar = el('img', 'avatar');
+      avatar.src = p.picture;
+      avatar.alt = 'Profile photo';
+    } else {
+      avatar = el('div', 'avatar', '👤');
+      avatar.title = 'No profile photo, or it is hidden';
+    }
+    const info = el('div');
+    info.append(el('div', 'profile-name', p.name || 'Name not visible'));
+    info.append(p.username
+      ? el('div', 'profile-handle', '@' + p.username)
+      : el('div', 'profile-num', 'No username'));
+    info.append(el('div', 'profile-num', number));
+    const tags = el('div', 'tags');
+    if (p.is_enterprise) tags.append(el('span', 'tag', 'Official business'));
+    else if (p.is_business) tags.append(el('span', 'tag', 'Business account'));
+    else tags.append(el('span', 'tag grey', 'Personal account'));
+    if (p.verified_name) tags.append(el('span', 'tag', '✓ ' + p.verified_name));
+    if (p.business && p.business.category) tags.append(el('span', 'tag grey', p.business.category));
+    info.append(tags);
+    head.append(avatar, info);
+    box.append(head);
+
+    const rows = [['About', p.about]];
+    if (p.business) {
+      rows.push(
+        ['Description', p.business.description],
+        ['Email', p.business.email],
+        ['Website', p.business.website && p.business.website.join('\n')],
+        ['Address', p.business.address],
+      );
+    }
+    const fields = el('dl', 'fields');
+    for (const [label, value] of rows) {
+      if (value) fields.append(el('dt', null, label), el('dd', null, value));
+    }
+    if (fields.children.length) box.append(fields);
+
+    if (!p.picture || !(p.name || p.username) || !p.about) {
+      box.append(el('p', 'hint', 'Some details are hidden by this person\'s WhatsApp privacy settings.'));
+    }
+    box.className = 'profile on';
+  }
+
+  // --- Bulk Excel check -----------------------------------------------------------
+  let jobId = null;
+
+  function setFile(file) {
+    if (file && !file.name.toLowerCase().endsWith('.xlsx')) {
+      showBulkError('Please choose an .xlsx Excel file.');
+      return;
+    }
+    if (file) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      $('file').files = dt.files;
+    }
+    const f = $('file').files[0];
+    $('file-label').innerHTML = f ? `<strong>${f.name.replace(/</g, '&lt;')}</strong>` : 'Click to choose a file, or drop it here';
+    $('bulk-btn').disabled = !f || Boolean(jobId);
+    $('bulk-error').className = 'result';
+  }
+
+  function showBulkError(msg) {
+    $('bulk-error').className = 'result err';
+    $('bulk-error').textContent = msg;
+  }
+
+  $('file').addEventListener('change', () => setFile());
+  ['dragover', 'dragenter'].forEach((ev) => $('drop').addEventListener(ev, (e) => {
+    e.preventDefault(); $('drop').classList.add('over');
+  }));
+  ['dragleave', 'drop'].forEach((ev) => $('drop').addEventListener(ev, () => $('drop').classList.remove('over')));
+  $('drop').addEventListener('drop', (e) => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
+
+  $('bulk-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const file = $('file').files[0];
+    if (!file) return;
+    $('bulk-btn').disabled = true;
+    $('bulk-btn').textContent = 'Uploading…';
+    $('bulk-error').className = 'result';
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const data = await api('/api/bulk', { method: 'POST', body });
+      jobId = data.id;
+      $('progress').hidden = false;
+      $('download').hidden = true;
+      $('cancel-btn').hidden = false;
+      pollJob();
+    } catch (err) {
+      showBulkError(err.message || 'Upload failed.');
+      $('bulk-btn').disabled = false;
+    } finally {
+      $('bulk-btn').textContent = 'Upload & check';
+    }
+  });
+
+  async function pollJob() {
+    try {
+      const job = await api(`/api/bulk/${jobId}`);
+      const pct = job.total ? Math.round((job.done / job.total) * 100) : 0;
+      $('bar-fill').style.width = pct + '%';
+      const remaining = Math.ceil(((job.total - job.done) * 2.5) / 60);
+      $('stats').textContent =
+        `${job.done} / ${job.total} checked · ${job.yes} on WhatsApp · ${job.no} not` +
+        (job.status === 'running' ? ` · about ${remaining} min left` : '');
+
+      if (job.status === 'running') return setTimeout(pollJob, 2000);
+
+      $('cancel-btn').hidden = true;
+      if (job.status === 'error') showBulkError(job.error || 'Something went wrong.');
+      if (job.downloadable) {
+        $('download').href = `/api/bulk/${jobId}/download`;
+        $('download').textContent = job.status === 'cancelled' ? 'Download partial results' : 'Download results';
+        $('download').hidden = false;
+      }
+      jobId = null;
+      setFile();
+    } catch {
+      if (me) setTimeout(pollJob, 4000);
+    }
+  }
+
+  $('cancel-btn').addEventListener('click', () => {
+    if (jobId) fetch(`/api/bulk/${jobId}/cancel`, { method: 'POST' });
+  });
+
+  addRow();
+
+  // --- Start ------------------------------------------------------------------
+  fetch('/auth/me')
+    .then((res) => (res.ok ? res.json() : null))
+    .then((user) => (user ? showApp(user) : showAuth()))
+    .catch(showAuth);
+</script>
+</body>
+</html>

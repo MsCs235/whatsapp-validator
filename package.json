@@ -1,0 +1,16 @@
+{
+  "name": "whatsapp-validator",
+  "version": "1.0.0",
+  "description": "Check whether a phone number is registered on WhatsApp",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "multer": "^2.4.0",
+    "qrcode": "^1.5.4",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}

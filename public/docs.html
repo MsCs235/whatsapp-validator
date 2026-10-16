@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WhatsApp Checker API</title>
+  <style>
+    :root {
+      --bg: #f0f2f5; --card: #fff; --text: #111b21; --muted: #667781; --border: #d1d7db;
+      --green: #128c7e; --code-bg: #f5f6f7; --post: #1e8e3e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0b141a; --card: #1f2c33; --text: #e9edef; --muted: #8696a0; --border: #374248;
+              --green: #25d366; --code-bg: #111b21; --post: #81c995; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text);
+           font: 15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 860px; margin: 0 auto; }
+    header { padding: 24px 0 8px; }
+    h1 { margin: 0; font-size: 1.8rem; }
+    h2 { margin: 36px 0 12px; font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { margin: 0 0 8px; font-size: 1.05rem; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    a { color: var(--green); }
+    .muted { color: var(--muted); }
+    .card { background: var(--card); border-radius: 12px; padding: 20px; margin: 16px 0;
+            box-shadow: 0 2px 12px rgba(0,0,0,.05); }
+    code { font-family: ui-monospace, Consolas, monospace; font-size: .9em; background: var(--code-bg);
+           padding: 1px 5px; border-radius: 4px; word-break: break-word; }
+    pre { background: var(--code-bg); padding: 14px; border-radius: 8px; overflow-x: auto; margin: 10px 0;
+          border: 1px solid var(--border); }
+    pre code { background: none; padding: 0; font-size: .85rem; }
+    .method { font: 700 .75rem ui-monospace, Consolas, monospace; padding: 3px 8px; border-radius: 5px;
+              color: #fff; background: var(--post); }
+    @media (prefers-color-scheme: dark) { .method { color: #111b21; } }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; margin: 10px 0; }
+    th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    .table-wrap { overflow-x: auto; }
+    .tabs { display: flex; gap: 4px; margin-top: 10px; flex-wrap: wrap; }
+    .tabs button { background: none; border: 1px solid var(--border); color: var(--text); padding: 4px 12px;
+                   border-radius: 6px; cursor: pointer; font-size: .85rem; }
+    .tabs button.on { background: var(--green); border-color: var(--green); color: #fff; }
+    .tab { display: none; } .tab.on { display: block; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>WhatsApp Checker API</h1>
+    <p class="muted">Check whether phone numbers are registered on WhatsApp from your own apps. <a href="/">← Back to the site</a></p>
+  </header>
+
+  <h2>Getting started</h2>
+  <div class="card">
+    <ol>
+      <li><a href="/">Create an account or log in</a>. Your <b>API key</b> is shown on your dashboard.</li>
+      <li>On the dashboard, click <b>Link WhatsApp</b> and scan the QR code with your phone. <b>Everything your API key does uses this WhatsApp account</b>: checks run through it and messages are sent from it.</li>
+      <li>Send the key with every request, in the <code>X-API-Key</code> header (or <code>Authorization: Bearer &lt;key&gt;</code>).</li>
+      <li>Call <code>POST /api/v1/check</code> with the numbers you want to check.</li>
+    </ol>
+    <p><b>Numbers</b> must include the country code. <code>+201001234567</code>, <code>00201001234567</code>, <code>+20 100 123 4567</code> and <code>+20-100-123-4567</code> are all accepted.</p>
+    <p><b>Speed:</b> to protect your WhatsApp account, the server checks about one number every 2.5 seconds for each account. A request with 10 numbers takes about 25 seconds, and one with 50 numbers about 2 minutes. Set your HTTP client's timeout to at least 3 minutes.</p>
+    <p><b>Limits:</b> up to 50 numbers per request and 30 requests per minute per API key.</p>
+  </div>
+
+  <h2>Check numbers</h2>
+  <div class="card">
+    <h3><span class="method">POST</span><code id="endpoint">/api/v1/check</code></h3>
+    <p>Checks one or more numbers and returns the answer in the same response. Duplicates in the same request are only checked once.</p>
+    <div class="table-wrap"><table>
+      <tr><th>Header</th><th>Value</th></tr>
+      <tr><td><code>X-API-Key</code></td><td>Your API key</td></tr>
+      <tr><td><code>Content-Type</code></td><td><code>application/json</code></td></tr>
+    </table></div>
+    <div class="table-wrap"><table>
+      <tr><th>Body field</th><th>Type</th><th></th></tr>
+      <tr><td><code>number</code></td><td>string or array of strings</td><td>Required. 1–50 numbers, each with a country code.</td></tr>
+    </table></div>
+
+    <p><b>Request:</b></p>
+<pre><code>{
+    "number": ["+201001234567", "+201000000000"]
+}</code></pre>
+    <p><b>Response</b> <code>200</code>:</p>
+<pre><code>{
+  "total": 2,
+  "summary": { "registered": 1, "not_registered": 1, "invalid": 0, "error": 0 },
+  "results": [
+    { "input": "+201001234567", "number": "+201001234567", "status": "registered",     "whatsapp": true },
+    { "input": "+201000000000", "number": "+201000000000", "status": "not_registered", "whatsapp": false }
+  ]
+}</code></pre>
+    <p>If you send a <b>single string</b> (<code>{"number": "+201001234567"}</code>), the response is one result object, not a list:</p>
+<pre><code>{ "input": "+201001234567", "number": "+201001234567", "status": "registered", "whatsapp": true }</code></pre>
+
+    <p><b>Result fields:</b></p>
+    <div class="table-wrap"><table>
+      <tr><th>Field</th><th>Meaning</th></tr>
+      <tr><td><code>input</code></td><td>Exactly what you sent</td></tr>
+      <tr><td><code>number</code></td><td>The normalized number, or <code>null</code> if it is invalid</td></tr>
+      <tr><td><code>status</code></td><td><code>registered</code> · <code>not_registered</code> · <code>invalid</code> (not a real phone number) · <code>error</code> (the check failed for this number; try again later)</td></tr>
+      <tr><td><code>whatsapp</code></td><td><code>true</code> if it has WhatsApp, <code>false</code> if not, <code>null</code> for invalid or error</td></tr>
+    </table></div>
+
+    <p><b>Examples:</b></p>
+    <div class="tabs" data-group="ex"></div>
+    <div class="tab" data-group="ex" data-lang="curl"><pre><code>curl -X POST "BASE/api/v1/check" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"number": ["+201001234567", "+201000000000"]}'</code></pre></div>
+    <div class="tab" data-group="ex" data-lang="JavaScript"><pre><code>const res = await fetch('BASE/api/v1/check', {
+  method: 'POST',
+  headers: { 'X-API-Key': 'YOUR_API_KEY', 'Content-Type': 'application/json' },
+  body: JSON.stringify({ number: ['+201001234567', '+201000000000'] }),
+});
+const data = await res.json();
+for (const r of data.results) console.log(r.number, r.whatsapp);</code></pre></div>
+    <div class="tab" data-group="ex" data-lang="Python"><pre><code>import requests
+
+r = requests.post("BASE/api/v1/check",
+                  json={"number": ["+201001234567", "+201000000000"]},
+                  headers={"X-API-Key": "YOUR_API_KEY"},
+                  timeout=180)
+for item in r.json()["results"]:
+    print(item["number"], item["whatsapp"])</code></pre></div>
+    <div class="tab" data-group="ex" data-lang="PHP"><pre><code>$ch = curl_init("BASE/api/v1/check");
+curl_setopt_array($ch, [
+  CURLOPT_POST => true,
+  CURLOPT_HTTPHEADER => ["X-API-Key: YOUR_API_KEY", "Content-Type: application/json"],
+  CURLOPT_POSTFIELDS => json_encode(["number" => ["+201001234567", "+201000000000"]]),
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_TIMEOUT => 180,
+]);
+$data = json_decode(curl_exec($ch), true);
+foreach ($data["results"] as $r) echo $r["number"], " ", var_export($r["whatsapp"], true), "\n";</code></pre></div>
+  </div>
+
+  <h2>Send messages</h2>
+  <div class="card">
+    <h3><span class="method">POST</span><code class="base-url">/api/v1/send</code></h3>
+    <p>Sends a text message to one or more numbers <b>from the WhatsApp account you linked on your dashboard</b>. Recipients see your number as the sender.</p>
+    <p>Each number is checked first. Numbers that aren't on WhatsApp are skipped and no chat is opened with them. Messages are sent one at a time, about 6–12 seconds apart, so a request to 20 numbers takes 2–4 minutes. Set your HTTP client's timeout to at least 5 minutes.</p>
+    <p><b>Limits:</b> up to 20 numbers per request, 200 messages per day per account (the count resets at midnight UTC), and 4,096 characters per message. Messaging many people who don't have your number saved can get your WhatsApp account banned.</p>
+    <div class="table-wrap"><table>
+      <tr><th>Body field</th><th>Type</th><th></th></tr>
+      <tr><td><code>number</code></td><td>string or array of strings</td><td>Required. 1–20 numbers, each with a country code.</td></tr>
+      <tr><td><code>message</code></td><td>string</td><td>Required. The text to send.</td></tr>
+    </table></div>
+    <p><b>Request:</b></p>
+<pre><code>{
+    "number": ["+201001234567", "+201000000000"],
+    "message": "Hello from WhatsApp Checker!"
+}</code></pre>
+    <p><b>Response</b> <code>200</code>:</p>
+<pre><code>{
+  "total": 2,
+  "summary": { "sent": 1, "not_registered": 1, "invalid": 0, "duplicate": 0, "daily_limit_reached": 0, "error": 0 },
+  "results": [
+    { "input": "+201001234567", "number": "+201001234567", "status": "sent", "message_id": "true_201001234567@c.us_3EB0..." },
+    { "input": "+201000000000", "number": "+201000000000", "status": "not_registered", "message_id": null }
+  ]
+}</code></pre>
+    <p>A single string in <code>number</code> returns one result object, not a list. Possible <code>status</code> values: <code>sent</code> · <code>not_registered</code> · <code>invalid</code> · <code>duplicate</code> (the same number appeared earlier in the request) · <code>daily_limit_reached</code> · <code>error</code>.</p>
+<pre><code>curl -X POST "BASE/api/v1/send"   -H "X-API-Key: YOUR_API_KEY"   -H "Content-Type: application/json"   -d '{"number": "+201001234567", "message": "Hello!"}'</code></pre>
+  </div>
+
+  <h2>Errors</h2>
+  <div class="card">
+    <p>Errors return a non-2xx status and this body:</p>
+    <pre><code>{ "error": { "code": "unauthorized", "message": "Missing or invalid API key. Send it in the X-API-Key header." } }</code></pre>
+    <div class="table-wrap"><table>
+      <tr><th>HTTP</th><th>code</th><th>What to do</th></tr>
+      <tr><td>400</td><td><code>missing_number</code></td><td>Send <code>number</code> as a string or a non-empty array</td></tr>
+      <tr><td>400</td><td><code>too_many_numbers</code></td><td>Split the list into requests of 50 or fewer</td></tr>
+      <tr><td>400</td><td><code>invalid_json</code></td><td>Fix the JSON body</td></tr>
+      <tr><td>400</td><td><code>missing_message</code>, <code>message_too_long</code></td><td>/send only: send a non-empty <code>message</code> of up to 4,096 characters</td></tr>
+      <tr><td>401</td><td><code>unauthorized</code></td><td>Send a valid API key (copy it from your dashboard)</td></tr>
+      <tr><td>429</td><td><code>rate_limited</code></td><td>Wait a minute and retry</td></tr>
+      <tr><td>429</td><td><code>daily_limit_reached</code></td><td>/send only: the 200 messages per day are used up; try again tomorrow</td></tr>
+      <tr><td>502</td><td><code>check_failed</code></td><td>WhatsApp did not answer (single-number requests); retry</td></tr>
+      <tr><td>503</td><td><code>whatsapp_not_connected</code></td><td>The WhatsApp account for this key isn't linked or is reconnecting. Log in and check the "Your WhatsApp" card on the dashboard.</td></tr>
+    </table></div>
+  </div>
+  <p class="muted" style="text-align:center;margin:32px 0">WhatsApp Checker API v1</p>
+</main>
+<script>
+  const base = location.origin;
+  document.getElementById('endpoint').textContent = base + '/api/v1/check';
+  document.querySelectorAll('.base-url').forEach((el) => { el.textContent = base + el.textContent; });
+  document.querySelectorAll('pre code').forEach((el) => { el.textContent = el.textContent.replaceAll('BASE', base); });
+
+  document.querySelectorAll('.tabs').forEach((bar) => {
+    const panes = document.querySelectorAll(`.tab[data-group="${bar.dataset.group}"]`);
+    panes.forEach((pane, i) => {
+      const b = document.createElement('button');
+      b.textContent = pane.dataset.lang;
+      b.onclick = () => {
+        panes.forEach((p) => p.classList.toggle('on', p === pane));
+        bar.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+      };
+      bar.appendChild(b);
+      if (i === 0) b.click();
+    });
+  });
+</script>
+</body>
+</html>
